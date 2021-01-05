@@ -167,6 +167,7 @@ bambooTest := {
 import scala.sys.process.Process
 import java.nio.file.{Files, Paths}
 
+lazy val npmCi = taskKey[Unit]("npm ci")
 lazy val webpack = taskKey[Unit]("Run webpack when packaging the application")
 lazy val webpackEnabled = settingKey[Boolean]("Is webpack enabled")
 
@@ -176,6 +177,16 @@ def runWebpack(file: File): Int = {
     (Process("npm ci", file) #&& Process("npm run build", file)).!
   } else {
     Process("npm run build", file).!
+  }
+}
+
+npmCi := {
+  Changes.ifChanged(
+    target.value / "npm-tracking",
+    baseDirectory.value / "package.json",
+    baseDirectory.value / "node_modules"
+  ) {
+    Process("npm ci", baseDirectory.value).!
   }
 }
 
@@ -197,6 +208,8 @@ webpack := {
     }
   }
 }
+
+webpack := webpack.dependsOn(npmCi).value
 
 runner := runner.dependsOn(webpack).value
 dist := dist.dependsOn(webpack).value
